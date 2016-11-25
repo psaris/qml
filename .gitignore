@@ -19,6 +19,10 @@ lapack/work
 lapack/lapack-*/
 nlopt/nlopt
 nlopt/nlopt-*/
+svm/work
+svm/libsvm-*/
+linear/work
+linear/liblinear-*/
 /download/
 /include/
 /lib/

@@ -40,6 +40,16 @@ LAPACK options:
   --build-lapack                       build Netlib LAPACK
   --with-lapack=/path/to/liblapack.a   use system LAPACK library
 
+LIBSVM options:
+
+  --build-libsvm                       build LIBSVM
+  --with-svm=/path/to/libsvm.so        use system LIBSVM library
+
+LIBLINEAR options:
+
+  --build-liblinear                    build LIBLINEAR
+  --with-svm=/path/to/liblinear.so     use system LIBLINEAR library
+
 USAGE
 }
 
@@ -52,6 +62,7 @@ unset LDFLAGS LDFLAGS_LIBGCC LD_EXPORT LD_STATIC LD_SHARED STRIP_FLAGS
 unset LIBS_FORTRAN LIBS_BLAS LIBS_LAPACK
 unset FETCH SHA256
 unset BUILD_BLAS BUILD_OPENBLAS WITH_BLAS BUILD_LAPACK WITH_LAPACK
+unset BUILD_LIBSVM WITH_LIBSVM BUILD_LIBLINEAR WITH_LIBLINEAR
 
 
 for arg in "$@"; do
@@ -71,6 +82,10 @@ for arg in "$@"; do
           --with-blas=*)     WITH_BLAS="${arg#*=}" ;;
          --build-lapack)  BUILD_LAPACK=1           ;;
         --with-lapack=*)   WITH_LAPACK="${arg#*=}" ;;
+         --build-libsvm)  BUILD_LIBSVM=1           ;;
+        --with-libsvm=*)   WITH_LIBSVM="${arg#*=}" ;;
+      --build-liblinear)  BUILD_LIBLINEAR=1        ;;
+     --with-liblinear=*)   WITH_LIBLINEAR="${arg#*=}" ;;
               -h|--help) usage; exit 0 ;;
                       *) echo "unknown configure option $1, try --help" >&2
                          exit 1 ;;
@@ -226,6 +241,8 @@ makeenv () {
         LIBS_FORTRAN="$LIBS_FORTRAN" \
         LIBS_BLAS="$LIBS_BLAS" \
         LIBS_LAPACK="$LIBS_LAPACK" \
+        LIBS_SVM="$LIBS_SVM" \
+        LIBS_LINEAR="$LIBS_LINEAR" \
         FETCH="$FETCH" \
         SHA256="$SHA256" \
         >>conftest.out 2>>conftest.err
@@ -531,7 +548,35 @@ else
                "" -llapack
 fi
 
+CONFTEST=libsvm
+if [ -n "$BUILD_LIBSVM" ]; then
+    echo "will build LIBSVM"
+elif [ -n "${WITH_LIBSVM+n}" ]; then
+    LIBS_LIBSVM=$WITH_LIBSVM
+    makeyesno "checking if LIBSVM works..." \
+           "LIBSVM is required, use --build-libsvm or different --with-libsvm" \
+           c_link
+else
+    makeselect "looking for LIBSVM..." \
+               "LIBSVM is required, use --build-libsvm or --with-libsvm" \
+               LIBS_LIBSVM c_link \
+               "" -llibsvm
+fi
 
+CONFTEST=liblinear
+if [ -n "$BUILD_LIBLINEAR" ]; then
+    echo "will build LIBLINEAR"
+elif [ -n "${WITH_LIBLINEAR+n}" ]; then
+    LIBS_LIBLINEAR=$WITH_LIBLINEAR
+    makeyesno "checking if LIBLINEAR works..." \
+           "LIBLINEAR is required, use --build-liblinear or different --with-liblinear" \
+           c_link
+else
+    makeselect "looking for LIBLINEAR..." \
+               "LIBLINEAR is required, use --build-liblinear or --with-liblinear" \
+               LIBS_LIBLINEAR c_link \
+               "" -lliblinear
+fi
 
 # Utilities
 
@@ -584,6 +629,10 @@ BUILD_BLAS     := $BUILD_BLAS
 BUILD_OPENBLAS := $BUILD_OPENBLAS
 LIBS_LAPACK    := $LIBS_LAPACK
 BUILD_LAPACK   := $BUILD_LAPACK
+LIBS_LIBSVM    := $LIBS_LIBSVM
+BUILD_LIBSVM   := $BUILD_LIBSVM
+LIBS_LIBLINEAR    := $LIBS_LIBLINEAR
+BUILD_LIBLINEAR   := $BUILD_LIBLINEAR
 FETCH          := $FETCH
 SHA256         := $SHA256
 PATCH          := $PATCH

@@ -30,10 +30,24 @@ DEFINES = -DQML_VERSION=$(VERSION) -DKXARCH=$(KXARCH) -DKXVER=$(KXVER)
 
 all: build
 
-build: qml.$(DLLEXT)
+build: $(foreach proj,qml svm linear,$(proj).$(DLLEXT))
 
 %.o: %.c $(INCLUDES) $(PKG_INCLUDES)
 	$(CC) -I../include \
+	    $(FLAGS) \
+	    $(CFLAGS) \
+	    $(DEFINES) \
+	    -c -o $@ $<
+
+svm.o: svm.c $(INCLUDES) $(PKG_INCLUDES)
+	$(CC) -I../include -shared \
+	    $(FLAGS) \
+	    $(CFLAGS) \
+	    $(DEFINES) \
+	    -c -o $@ $<
+
+linear.o: linear.c $(INCLUDES) $(PKG_INCLUDES)
+	$(CC) -I../include -shared \
 	    $(FLAGS) \
 	    $(CFLAGS) \
 	    $(DEFINES) \
@@ -48,6 +62,23 @@ qml.$(DLLEXT): $(OBJS) qml.symlist qml.mapfile $(PKG_LIBS)
 	    -lm \
 	    $(call ld_export,qml)
 
+svm.$(DLLEXT): svm.symlist svm.mapfile $(LIBS_SVM) svm.o
+	$(CC) $(FLAGS) $(LD_SHARED) -o $@ svm.o \
+	    ../lib/libsvm.o \
+	    -lstdc++ $(LDFLAGS) \
+	    $(call ld_static,$(LIBS_SVM)) \
+	    -lm \
+	    $(call ld_export,svm)
+
+linear.$(DLLEXT): linear.symlist linear.mapfile $(LIBS_LINEAR) linear.o
+	$(CC) $(FLAGS) $(LD_SHARED) -o $@ linear.o \
+	    ../lib/liblinear.o ../lib/libtron.o \
+	    -lstdc++ $(LDFLAGS) \
+	    $(if $(BUILD_BLAS),,$(if $(BUILD_OPENBLAS),../lib/libopenblas.a,$(LIBS_BLAS))) \
+	    $(call ld_static,$(LIBS_LINEAR)) \
+	    -lm \
+	    $(call ld_export,linear)
+
 qml.symlist: $(OBJS)
 	$(call nm_exports,$(OBJS)) | sed -n 's/^qml_/_&/p' >$@.tmp
 	$(if $(BUILD_BLAS)$(BUILD_OPENBLAS),,echo _xerbla_ >>$@.tmp)
@@ -59,22 +90,53 @@ qml.mapfile: qml.symlist
 	echo "  local: *; };"       >>$@.tmp
 	mv $@.tmp $@
 
+svm.symlist: svm.o
+	$(call nm_exports,$^) | sed -n 's/^qml_/_&/p' >$@.tmp
+	mv $@.tmp $@
+
+svm.mapfile: svm.symlist
+	echo "{ global:"             >$@.tmp
+	sed 's/^_/    /;s/$$/;/' $< >>$@.tmp
+	echo "  local: *; };"       >>$@.tmp
+	mv $@.tmp $@
+
+linear.symlist: linear.o
+	$(call nm_exports,$^) | sed -n 's/^qml_/_&/p' >$@.tmp
+	mv $@.tmp $@
+
+linear.mapfile: linear.symlist
+	echo "{ global:"             >$@.tmp
+	sed 's/^_/    /;s/$$/;/' $< >>$@.tmp
+	echo "  local: *; };"       >>$@.tmp
+	mv $@.tmp $@
 
 ifneq ($(QHOME),)
 # don't export QHOME because q below should get it from the general environment
 install: build
-	install qml.$(DLLEXT) '$(QHOME)'/$(KXARCH)/
-	install qml.q         '$(QHOME)'/
-	
+	install $(addsuffix .$(DLLEXT),qml svm linear) '$(QHOME)'/$(KXARCH)/
+	install qml.q svm.q linear.q                   '$(QHOME)'/
+
 uninstall:
-	rm -f -- '$(QHOME)'/$(KXARCH)/qml.$(DLLEXT)
-	rm -f -- '$(QHOME)'/qml.q
+	rm -f -- $(foreach proj,qml svm linear,'$(QHOME)'/$(KXARCH)/$(proj).$(DLLEXT))
+	rm -f -- $(foreach proj,qml svm linear,'$(QHOME)'/$(proj).q
 endif
 
 # can override on make command-line
 TEST_OPTS=
-test: build
+testqml: build
 	q test.q -cd -s 16 $(TEST_OPTS) </dev/null
+testsvm: build
+	cd ../svm/work && q ../../src/testsvm.q 2>/dev/null </dev/null
+testlinear: build
+	cd ../linear/work && q ../../src/testlinear.q 2>/dev/null </dev/null
+
+ifneq ($(BUILD_LIBSVM),)
+test: testsvm
+endif
+ifneq ($(BUILD_LIBLINEAR),)
+test: testlinear
+endif
+test: testqml
 
 BENCH_OPTS=
 bench: build
@@ -84,7 +146,7 @@ bench: build
 clean_src:
 clean_misc:
 clean: clean_src clean_misc
-	rm -f qml.so qml.dll qml.symlist qml.mapfile
+	rm -f $(foreach proj,qml svm linear,$(proj).so $(proj).dll $(proj).symlist $(proj).mapfile)
 	rm -f $(OBJS)
 
 
