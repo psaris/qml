@@ -1,5 +1,6 @@
 \l svm.q
 assert:{if[not x~y;'`fail]}
+.svm.set_print_string_function `
 .svm.version
 assert[s] .svm.write_problem prob:.svm.read_problem s:read0 `heart_scale
 assert[::] .svm.check_parameter[prob] param:.svm.defparam[prob] .svm.param

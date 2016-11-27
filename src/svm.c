@@ -8,11 +8,18 @@
 
 #define D(x) {if(!(x))goto done;}
 
+ZS print_string_function = "2";
+
 ZV
-print_string_stderr(const char *s)
+print_string_q(const char *s)
 {
-    fputs(s,stderr);
-    fflush(stderr);
+    K r;
+    
+    if (r = k(0,print_string_function,kp((S)s),(K)0)) {
+        if (r->t == -128)
+            O(r->s), O("\n");
+        r0(r);
+    }
 }
 
 ZV
@@ -432,10 +439,18 @@ qml_svm_model_inout(K kmodel) {
 }
 
 K
+qml_svm_set_print_string_function(K x) {
+    P(xt != -KS, krr("type"));
+    
+    print_string_function = xs;
+    R 0;
+}
+
+K
 qml_svm_lib(K x) {
     K y;
 
-    svm_set_print_string_function(print_string_stderr);
+    svm_set_print_string_function(print_string_q);
     
     x=ktn(KS,0);
     y=ktn(0,0);
@@ -453,6 +468,6 @@ qml_svm_lib(K x) {
     js(&x,ss("prob_inout")),              jk(&y,dl(qml_svm_prob_inout,1));
     js(&x,ss("param_inout")),             jk(&y,dl(qml_svm_param_inout,1));
     js(&x,ss("model_inout")),             jk(&y,dl(qml_svm_model_inout,1));
-
+    js(&x,ss("set_print_string_function")), jk(&y,dl(qml_svm_set_print_string_function,1));
     R xD(x,y);
 }
