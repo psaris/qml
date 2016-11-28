@@ -3,6 +3,7 @@
 *.o
 *.so
 *.dll
+*.dSYM
 *.symlist
 *.mapfile
 *.orig

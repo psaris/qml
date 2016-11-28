@@ -147,10 +147,11 @@ clean_src:
 clean_misc:
 clean: clean_src clean_misc
 	rm -f $(foreach proj,qml svm linear,$(proj).so $(proj).dll $(proj).symlist $(proj).mapfile)
-	rm -f $(OBJS)
+	rm -rf $(foreach proj,qml svm linear,$(proj).so.dSYM)
+	rm -f $(OBJS) svm.o linear.o
 
 
-SRC = $(patsubst %.o,%.c,$(OBJS)) $(INCLUDES)
+SRC = $(patsubst %.o,%.c,$(OBJS) svm.o linear.o) $(INCLUDES)
 
 define rule_cp
 $(1): $(2)
