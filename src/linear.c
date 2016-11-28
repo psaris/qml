@@ -199,7 +199,7 @@ parameter_to_k(const struct parameter *p) {
 
 ZI
 k_to_parameter(const K d, struct parameter *p) {
-    K x, w;
+    K x;
     U(x = findt(d, "solver_type", -KI)); p->solver_type = xi;
     U(x = findt(d, "eps", -KF));         p->eps = xf;
     U(x = findt(d, "C", -KF));           p->C = xf;
