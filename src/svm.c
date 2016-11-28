@@ -359,11 +359,20 @@ qml_svm_predict(K kmodel, K knodes) {
     struct svm_model model;
     struct svm_node *nodes = 0;
     K r = 0;
+    I i;
     
     memset(&model, 0, sizeof(struct svm_model)), model.free_sv = 1;
     D(k_to_model(kmodel,&model));
-    D(k_to_node_dict(knodes, &nodes));
-    r = kf(svm_predict(&model,nodes));
+    if (knodes->t) {
+        D(k_to_node_dict(knodes, &nodes));
+        r = kf(svm_predict(&model,nodes));
+    } else {
+        r = ktn(KF,knodes->n);
+        for (i = 0;i < knodes->n;++i) {
+            D(k_to_node_dict(kK(knodes)[i], &nodes));
+            kF(r)[i] = svm_predict(&model,nodes);
+        }
+    }
  done:
     svm_free_model_content(&model);
     free(nodes);
@@ -375,12 +384,24 @@ qml_svm_predict_values(K kmodel, K knodes) {
     struct svm_model model;
     struct svm_node *nodes = 0;
     K r = 0, dec_values = 0;
+    I i;
     
     memset(&model, 0, sizeof(struct svm_model)), model.free_sv = 1;
     D(k_to_model(kmodel,&model));
-    D(k_to_node_dict(knodes, &nodes));
-    dec_values = ktn(KF,model.nr_class*(model.nr_class-1)/2);
-    r = knk(2,kf(svm_predict_values(&model,nodes,kF(dec_values))),dec_values);
+    if (knodes->t) {
+        D(k_to_node_dict(knodes, &nodes));
+        dec_values = ktn(KF,model.nr_class*(model.nr_class-1)/2);
+        r = knk(2,kf(svm_predict_values(&model,nodes,kF(dec_values))),dec_values);
+    } else {
+        r = knk(2,ktn(KF,knodes->n),ktn(0,knodes->n));
+        for (i = 0;i < knodes->n;++i) {
+            D(k_to_node_dict(kK(knodes)[i], &nodes));
+            dec_values = ktn(KF,model.nr_class*(model.nr_class-1)/2);
+            kF(kK(r)[0])[i] = svm_predict_values(&model,nodes,kF(dec_values));
+            kK(kK(r)[1])[i] = dec_values;
+        }
+
+    }
  done:
     svm_free_model_content(&model);
     free(nodes);
@@ -392,13 +413,25 @@ qml_svm_predict_probability(K kmodel, K knodes) {
     struct svm_model model;
     struct svm_node *nodes = 0;
     K r = 0, prob = 0;
-    I n;
+    I i;
     
     memset(&model, 0, sizeof(struct svm_model)), model.free_sv = 1;
     D(k_to_model(kmodel,&model));
-    D(n = k_to_node_dict(knodes, &nodes));
-    prob = ktn(KF,model.nr_class);
-    r = knk(2,kf(svm_predict_probability(&model,nodes,kF(prob))),prob);
+    if (knodes->t) {
+        D(k_to_node_dict(knodes, &nodes));
+        prob = ktn(KF,model.nr_class);
+        memset(kF(prob), 0, prob->n*sizeof(F));
+        r = knk(2,kf(svm_predict_probability(&model,nodes,kF(prob))),prob);
+    } else {
+        r = knk(2,ktn(KF,knodes->n),ktn(0,knodes->n));
+        for (i = 0;i < knodes->n; ++i) {
+            D(k_to_node_dict(kK(knodes)[i], &nodes));
+            prob = ktn(KF,model.nr_class);
+            memset(kF(prob), 0, prob->n*sizeof(F));
+            kF(kK(r)[0])[i] = svm_predict_probability(&model,nodes,kF(prob));
+            kK(kK(r)[1])[i] = prob;
+        }
+    }
  done:
     svm_free_model_content(&model);
     free(nodes);
