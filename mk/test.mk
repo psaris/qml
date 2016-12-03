@@ -5,6 +5,10 @@ define conftest.c/
 int main() { return 0; }
 endef
 
+define conftest.cpp/
+int main() { int& x = *new int(); return x; }
+endef
+
 define conftest.f/
        program main
        end
@@ -67,11 +71,15 @@ define conftest.f/stack_local
 endef
 
 export conftest_c = $(conftest.c/$(CONFTEST))
+export conftest_cpp = $(conftest.cpp/$(CONFTEST))
 export conftest_f = $(conftest.f/$(CONFTEST))
 export conftest_def
 
 conftest.c: force
 	echo "$$conftest_c" >$@
+
+conftest.cpp: force
+	echo "$$conftest_cpp" >$@
 
 conftest.f: force
 	echo "$$conftest_f" >$@
@@ -105,6 +113,17 @@ test/xc_link: conftest.c
 
 test/xc_run: test/xc_link
 	./conftest.exe
+
+
+test/cpp_version:
+	$(CXX) --version
+
+test/cpp_compile: conftest.cpp
+	$(CXX) -Werror -c -o conftest.o $< \
+	    $(FLAGS) $(CXXFLAGS)
+
+test/cpp_link: conftest.cpp
+	$(CXX) -o conftest.exe $<
 
 
 test/f_version:

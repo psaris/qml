@@ -15,11 +15,13 @@ Target options:
 Compiler options:
 
     CC=gcc                C compiler
+    CC=g++                C++ compiler
     FC=gfortran           Fortran compiler
 
     CFLAGS=-O3            C compiler flags
+    CXXFLAGS=             C++ compiler flags
     FFLAGS=               Fortran compiler flags
-    FLAGS=-march=native   common flags for both compilers
+    FLAGS=-march=native   common flags for all compilers
 
     TOOLPREFIX=           prefix for ld, ar, ranlib, dlltool, nm binaries
                           e.g. x86_64-w64-mingw32-
@@ -54,7 +56,7 @@ USAGE
 }
 
 
-unset CONFTEST KXARCH KXVER QHOME_CONFIG CC FC CFLAGS CFLAGS_FLOAT
+unset CONFTEST KXARCH KXVER QHOME_CONFIG CC CXX FC CFLAGS CFLAGS_FLOAT CXXFLAGS
 unset FFLAGS FFLAGS_FLOAT FFLAGS_THREAD
 unset FLAGS FLAGS_BITS FLAGS_WINDOWS FLAGS_PIC FLAGS_PIPE
 unset TOOLPREFIX XCC CONFIG
@@ -70,8 +72,10 @@ for arg in "$@"; do
                KXARCH=*)        KXARCH="${arg#*=}" ;;
                 KXVER=*)         KXVER="${arg#*=}" ;;
                    CC=*)            CC="${arg#*=}" ;;
+                  CXX=*)           CXX="${arg#*=}" ;;
                    FC=*)            FC="${arg#*=}" ;;
                CFLAGS=*)        CFLAGS="${arg#*=}" ;;
+             CXXFLAGS=*)      CXXFLAGS="${arg#*=}" ;;
                FFLAGS=*)        FFLAGS="${arg#*=}" ;;
                 FLAGS=*)         FLAGS="${arg#*=}" ;;
            TOOLPREFIX=*)    TOOLPREFIX="${arg#*=}" ;;
@@ -225,8 +229,10 @@ makeenv () {
         KXVER="$KXVER" \
         QHOME="$QHOME_CONFIG" \
         CC="$CC" \
+        CXX="$CXX" \
         FC="$FC" \
         CFLAGS="$CFLAGS $CFLAGS_FLOAT" \
+        CXXFLAGS="$CXXFLAGS" \
         FFLAGS="$FFLAGS $FFLAGS_FLOAT $FFLAGS_THREAD" \
         FLAGS="$FLAGS $FLAGS_BITS $FLAGS_WINDOWS $FLAGS_PIC $FLAGS_PIPE" \
         XAR="$XAR" \
@@ -354,6 +360,35 @@ makeyesno "checking if build-time C compiler links..." \
 makeyesno "checking if build-time C compiler output runs..." \
           "a working compiler is required." \
           xc_run
+
+
+echo_n "looking for C++ compiler... "
+if [ -n "$CXX" ]; then
+    echo "$CXX (selected)"
+elif [ -n "$CC_selected" ] && [ -z "${CC_selected%%*gcc*}" ]; then
+    makeselect "" \
+               "a compiler is required." \
+               CXX cpp_version \
+               "${CC_selected%gcc*}g++${CC_selected##*gcc}" \
+               g++
+else
+    CXX=g++
+    echo "$CXX (default)"
+fi
+
+makeyesno "checking if C++ compiler compiles..." \
+          "a working compiler is required." \
+          cpp_compile
+
+makeyesno "checking if C++ compiler links..." \
+          "a working compiler is required." \
+          cpp_link
+
+if [ -z "${FFLAGS+n}" ]; then
+    makeselect "selecting C++ optimization options..." "" \
+               CXXFLAGS cpp_link \
+               -O2 ""
+fi
 
 
 echo_n "looking for Fortran compiler... "
@@ -609,8 +644,10 @@ KXARCH         := $KXARCH
 KXVER          := $KXVER
 QHOME          := $QHOME_CONFIG
 CC             := $CC
+CXX            := $CXX
 FC             := $FC
 CFLAGS         := $CFLAGS $CFLAGS_FLOAT
+CXXFLAGS       := $CXXFLAGS
 FFLAGS         := $FFLAGS $FFLAGS_FLOAT $FFLAGS_THREAD
 FFLAGS_NTHREAD := $FFLAGS $FFLAGS_FLOAT
 FLAGS          := $FLAGS $FLAGS_BITS $FLAGS_WINDOWS $FLAGS_PIC $FLAGS_PIPE

@@ -63,18 +63,18 @@ qml.$(DLLEXT): $(OBJS) qml.symlist qml.mapfile $(PKG_LIBS)
 	    $(call ld_export,qml)
 
 svm.$(DLLEXT): svm.symlist svm.mapfile $(LIBS_SVM) svm.o
-	$(CC) $(FLAGS) $(LD_SHARED) -o $@ svm.o \
+	$(CXX) $(FLAGS) $(LD_SHARED) -o $@ svm.o \
 	    ../lib/libsvm.o \
-	    -lstdc++ $(LDFLAGS) \
+	    $(LDFLAGS) \
 	    $(call ld_static,$(LIBS_SVM)) \
 	    -lm \
 	    $(call ld_export,svm)
 
 linear.$(DLLEXT): linear.symlist linear.mapfile $(LIBS_LINEAR) linear.o
-	$(CC) $(FLAGS) $(LD_SHARED) -o $@ linear.o \
+	$(CXX) $(FLAGS) $(LD_SHARED) -o $@ linear.o \
 	    ../lib/liblinear.o ../lib/libtron.o \
-	    -lstdc++ $(LDFLAGS) \
-	    $(if $(BUILD_BLAS),,$(if $(BUILD_OPENBLAS),../lib/libopenblas.a,$(LIBS_BLAS))) \
+	    $(LDFLAGS) \
+	    $(if $(BUILD_BLAS),../lib/librefblas.a,$(if $(BUILD_OPENBLAS),../lib/libopenblas.a,$(LIBS_BLAS))) \
 	    $(call ld_static,$(LIBS_LINEAR)) \
 	    -lm \
 	    $(call ld_export,linear)
